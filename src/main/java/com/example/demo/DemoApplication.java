@@ -1,20 +1,18 @@
 package com.example.demo;
+import org.jspecify.annotations.NonNull;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+import java.util.Set;
 
-import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
+
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -71,3 +69,31 @@ class GlobalExceptionHandler {
 	}
 }
 
+
+@Component
+class DataSeeder implements CommandLineRunner {
+	private final UserRepository users;
+	private final ItServiceRepository services;
+	private final CategoryRepository categories;
+
+	DataSeeder(UserRepository users, ItServiceRepository services, CategoryRepository categories) {
+		this.users = users; this.services = services; this.categories = categories;
+	}
+
+	@Override
+	public void run(String @NonNull ... args) {
+		if (users.count() > 0) return;
+		users.save(new Employee("Asha", "asha@corp.test", "Finance"));
+		users.save(new Technician("Ravi", "ravi@corp.test", Set.of("Network", "Database"), 5, 5));
+		users.save(new Technician("Meera", "meera@corp.test", Set.of("Application", "Cloud"), 3, 4));
+		users.save(new Administrator("Admin", "admin@corp.test"));
+		services.save(new ItService("Payment", 5));
+		services.save(new ItService("Email", 2));
+		services.save(new ItService("Network", 4));
+		categories.save(new Category("Application"));
+		categories.save(new Category("Network"));
+		categories.save(new Category("Database"));
+		System.out.println("Seeded: " + users.count() + " users, "
+				+ services.count() + " services, " + categories.count() + " categories");
+	}
+}
