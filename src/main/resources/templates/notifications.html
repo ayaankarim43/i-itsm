@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="">
+<head><meta charset="UTF-8"><title>Notifications</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+<main>
+    <h2>Notifications</h2>
+    <table>
+        <tr><th>Time</th><th>Incident</th><th>Message</th></tr>
+        <tr th:each="n : ${items}">
+            <td th:text="${#temporals.format(n.createdAt, 'dd MMM HH:mm:ss')}"></td>
+            <td><a th:href="@{/ui/incidents/{id}(id=${n.incidentId})}" th:text="${'INC' + n.incidentId}"></a></td>
+            <td th:text="${n.message}"></td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(items)}"><td colspan="3">No notifications yet.</td></tr>
+    </table>
+</main>
+</body>
+</html>

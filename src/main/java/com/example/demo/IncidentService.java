@@ -95,6 +95,12 @@ public class IncidentService {
 	@Transactional public Incident acknowledge(Long id) { return transition(id, EventType.ACKNOWLEDGED, Incident::acknowledge); }
 	@Transactional public Incident startWork(Long id)   { return transition(id, EventType.STARTED, Incident::startWork); }
 	@Transactional public Incident resolve(Long id)     { return transition(id, EventType.RESOLVED, Incident::resolve); }
+	@Transactional
+	public Incident resolve(Long id, String resolution) {
+		if (resolution == null || resolution.isBlank())
+			throw new IllegalArgumentException("Resolution details are required");
+		return transition(id, EventType.RESOLVED, i -> { i.resolve(); i.recordResolution(resolution.trim()); });
+	}
 	@Transactional public Incident verify(Long id)      { return transition(id, EventType.VERIFIED, Incident::verify); }
 	@Transactional public Incident close(Long id)       { return transition(id, EventType.CLOSED, Incident::close); }
 

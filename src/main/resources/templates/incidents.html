@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="">
+<head><meta charset="UTF-8"><title>Incidents</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+<main>
+  <div th:replace="~{fragments :: flash}"></div>
+  <h2>Incidents</h2>
+  <form method="get" th:action="@{/ui/incidents}" class="filters">
+    <select name="status"><option value="">Any status</option>
+      <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == status}"></option></select>
+    <select name="priority"><option value="">Any priority</option>
+      <option th:each="p : ${priorities}" th:value="${p}" th:text="${p}" th:selected="${p == priority}"></option></select>
+    <input name="text" placeholder="Search description" th:value="${text}">
+    <label th:if="${isStaff}"><input type="checkbox" name="mine" value="true" th:checked="${mine}"> My assigned</label>
+    <button type="submit">Filter</button>
+  </form>
+  <table>
+    <tr><th>ID</th><th>Description</th><th>Service</th><th>Priority</th><th>Status</th><th>Technician</th><th>SLA</th><th>Created</th></tr>
+    <tr th:each="i : ${incidents}">
+      <td><a th:href="@{/ui/incidents/{id}(id=${i.id})}" th:text="${'INC' + i.id}"></a></td>
+      <td th:text="${i.description}"></td>
+      <td th:text="${i.service.name}"></td>
+      <td><span class="badge" th:classappend="'p-' + ${i.priority}" th:text="${i.priority}"></span></td>
+      <td th:text="${i.status}"></td>
+      <td th:text="${i.assignedTo?.name ?: '-'}"></td>
+      <td><span class="badge" th:classappend="'sla-' + ${i.slaStatus}" th:text="${i.slaStatus}"></span></td>
+      <td th:text="${#temporals.format(i.createdAt, 'dd MMM HH:mm')}"></td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(incidents)}"><td colspan="8">No incidents found.</td></tr>
+  </table>
+</main>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="">
+<head><meta charset="UTF-8"><title>Incident</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+<main>
+    <div th:replace="~{fragments :: flash}"></div>
+    <h2><span th:text="${'INC' + incident.id}"></span>
+        <span class="badge" th:classappend="'p-' + ${incident.priority}" th:text="${incident.priority}"></span>
+        <span class="badge" th:text="${incident.status}"></span></h2>
+    <p th:text="${incident.description}"></p>
+
+    <table class="kv">
+        <tr><th>Reporter</th><td th:text="${incident.reporter.name}"></td></tr>
+        <tr><th>Service</th><td th:text="${incident.service.name + ' (criticality ' + incident.service.businessCriticality + ')'}"></td></tr>
+        <tr><th>Category</th><td th:text="${incident.category?.name ?: 'Not classified yet'}"></td></tr>
+        <tr><th>Impact / urgency</th><td th:text="${incident.impact + ' / ' + incident.urgency + ' (score ' + incident.priorityScore + ')'}"></td></tr>
+        <tr><th>Technician</th><td th:text="${incident.assignedTo?.name ?: 'Unassigned'}"></td></tr>
+        <tr><th>Created</th><td th:text="${#temporals.format(incident.createdAt, 'dd MMM yyyy HH:mm:ss')}"></td></tr>
+        <tr th:if="${incident.resolution != null}"><th>Resolution</th><td th:text="${incident.resolution}"></td></tr>
+    </table>
+
+    <div th:if="${incident.sla != null}">
+        <h3>SLA <span class="badge" th:classappend="'sla-' + ${incident.slaStatus}" th:text="${incident.slaStatus}"></span></h3>
+        <table class="kv">
+            <tr><th>Response due</th><td th:text="${#temporals.format(incident.sla.responseDeadline, 'dd MMM HH:mm:ss')}"></td></tr>
+            <tr><th>Responded at</th><td th:text="${incident.sla.respondedAt != null ? #temporals.format(incident.sla.respondedAt, 'dd MMM HH:mm:ss') : 'Not yet'}"></td></tr>
+            <tr><th>Resolution due</th><td th:text="${#temporals.format(incident.sla.resolutionDeadline, 'dd MMM HH:mm:ss')}"></td></tr>
+            <tr><th>Resolved at</th><td th:text="${incident.sla.resolvedAt != null ? #temporals.format(incident.sla.resolvedAt, 'dd MMM HH:mm:ss') : 'Not yet'}"></td></tr>
+        </table>
+    </div>
+
+    <h3>Next step</h3>
+    <p th:if="${nextAction == null}">This incident is closed.</p>
+    <p class="muted" th:if="${nextAction != null and !canAct}" th:text="${'Waiting for: ' + nextLabel + ' (not available to you)'}"></p>
+    <form th:if="${canAct}" method="post" th:action="@{/ui/incidents/{id}/{act}(id=${incident.id},act=${nextAction})}">
+        <select name="categoryId" th:if="${nextAction == 'classify'}">
+            <option value="">Suggest automatically</option>
+            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"></option>
+        </select>
+        <textarea name="resolution" rows="3" required placeholder="Resolution details" th:if="${nextAction == 'resolve'}"></textarea>
+        <button type="submit" th:text="${nextLabel}"></button>
+    </form>
+
+    <h3>History</h3>
+    <table>
+        <tr><th>Time</th><th>User</th><th>Action</th><th>From</th><th>To</th><th>Description</th></tr>
+        <tr th:each="h : ${history}">
+            <td th:text="${#temporals.format(h.timestamp, 'dd MMM HH:mm:ss')}"></td>
+            <td th:text="${h.actor}"></td><td th:text="${h.action}"></td>
+            <td th:text="${h.previousState}"></td><td th:text="${h.newState}"></td>
+            <td th:text="${h.description}"></td>
+        </tr>
+    </table>
+</main>
+</body>
+</html>

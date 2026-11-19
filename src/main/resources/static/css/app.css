@@ -1,0 +1,25 @@
+body{font-family:system-ui,sans-serif;margin:0;background:#f5f6f8;color:#222}
+.nav{display:flex;gap:16px;align-items:center;background:#1f3a5f;color:#fff;padding:10px 20px}
+.nav a{color:#fff;text-decoration:none}
+.nav .logout{margin-left:auto;display:flex;gap:8px;align-items:center}
+main{max-width:1100px;margin:20px auto;padding:0 16px}
+table{border-collapse:collapse;width:100%;background:#fff;margin-bottom:20px}
+th,td{border:1px solid #dde;padding:6px 10px;text-align:left;vertical-align:top}
+th{background:#eef1f6}
+.kv th{width:180px}
+.badge{padding:2px 8px;border-radius:10px;background:#ddd;font-size:.8em}
+.p-P1{background:#f8b4b4}.p-P2{background:#fbd38d}.p-P3{background:#fefcbf}.p-P4{background:#c6f6d5}
+.sla-BREACHED{background:#f8b4b4}.sla-AT_RISK{background:#fbd38d}.sla-ON_TRACK{background:#c6f6d5}
+.msg{padding:8px 12px;border-radius:4px}.ok{background:#c6f6d5}.err{background:#fed7d7}
+.cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.card{background:#fff;padding:12px 18px;border-radius:6px;min-width:120px}
+.card b{display:block;font-size:1.6em}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.filters,.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+form label{display:block;margin:10px 0}
+input,select,textarea,button{padding:6px;font:inherit}
+textarea{width:100%;box-sizing:border-box}
+button{cursor:pointer}
+.muted{color:#666}
+.center{display:flex;justify-content:center;padding-top:60px}
+.box{background:#fff;padding:24px;border-radius:8px;width:340px}

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="">
+<body>
+<nav th:fragment="nav" class="nav">
+    <strong>I-ITSM</strong>
+    <a th:href="@{/ui/incidents}">Incidents</a>
+    <a th:href="@{/ui/incidents/new}" th:if="${!isStaff or isAdmin}">Report incident</a>
+    <a th:href="@{/ui/dashboard}" th:if="${isStaff}">Dashboard</a>
+    <a th:href="@{/ui/admin}" th:if="${isAdmin}">Admin</a>
+    <a th:href="@{/ui/notifications}">Notifications</a>
+    <form th:action="@{/logout}" method="post" class="logout">
+        <span th:text="${me}"></span>
+        <button type="submit">Log out</button>
+    </form>
+</nav>
+<div th:fragment="flash">
+    <p class="msg ok" th:if="${ok}" th:text="${ok}"></p>
+    <p class="msg err" th:if="${error}" th:text="${error}"></p>
+</div>
+<div th:fragment="counts(title, data)">
+    <h3 th:text="${title}"></h3>
+    <table><tr th:each="e : ${data}"><td th:text="${e.key}"></td><td th:text="${e.value}"></td></tr></table>
+</div>
+</body>
+</html>

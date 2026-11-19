@@ -24,7 +24,12 @@ public class Incident {
 	@ManyToOne private Category category;    // null until classified
 	@ManyToOne private Technician assignedTo;
 
-	private int impact;
+	@Column(length = 2000)
+	private String resolution;
+
+	public String getResolution() { return resolution; }
+	public void recordResolution(String text) { this.resolution = text;}
+		private int impact;
 	private int urgency;
 	private int priorityScore;
 	@Enumerated(EnumType.STRING)

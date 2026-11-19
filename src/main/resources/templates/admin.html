@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="">
+<head><meta charset="UTF-8"><title>Admin</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+<main>
+    <div th:replace="~{fragments :: flash}"></div>
+
+    <h2>Assignment strategy</h2>
+    <form method="post" th:action="@{/ui/admin/strategy}" class="inline">
+        <select name="name">
+            <option th:each="s : ${strategies}" th:value="${s}" th:text="${s}" th:selected="${s == activeStrategy}"></option>
+        </select>
+        <button type="submit">Apply</button>
+    </form>
+
+    <h2>SLA policies</h2>
+    <table>
+        <tr><th>Priority</th><th>Service</th><th>Response / resolution target (minutes)</th></tr>
+        <tr th:each="p : ${policies}">
+            <td th:text="${p.priority}"></td>
+            <td th:text="${p.service?.name ?: 'All services'}"></td>
+            <td>
+                <form method="post" th:action="@{/ui/admin/sla/{id}(id=${p.id})}" class="inline">
+                    <input type="number" name="response" min="1" th:value="${p.responseMinutes}">
+                    <input type="number" name="resolution" min="1" th:value="${p.resolutionMinutes}">
+                    <button type="submit">Save</button>
+                </form>
+            </td>
+        </tr>
+    </table>
+
+    <h2>Audit log (latest 50)</h2>
+    <table>
+        <tr><th>Time</th><th>User</th><th>Incident</th><th>Action</th><th>From</th><th>To</th><th>Description</th></tr>
+        <tr th:each="h : ${audit}">
+            <td th:text="${#temporals.format(h.timestamp, 'dd MMM HH:mm:ss')}"></td>
+            <td th:text="${h.actor}"></td>
+            <td><a th:href="@{/ui/incidents/{id}(id=${h.incidentId})}" th:text="${'INC' + h.incidentId}"></a></td>
+            <td th:text="${h.action}"></td><td th:text="${h.previousState}"></td><td th:text="${h.newState}"></td>
+            <td th:text="${h.description}"></td>
+        </tr>
+    </table>
+</main>
+</body>
+</html>

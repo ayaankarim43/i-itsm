@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="">
+<head><meta charset="UTF-8"><title>Report incident</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+<main>
+  <div th:replace="~{fragments :: flash}"></div>
+  <h2>Report an incident</h2>
+  <form method="post" th:action="@{/ui/incidents}">
+    <label>What is wrong?
+      <textarea name="description" rows="4" required placeholder="e.g. Payment application unavailable, users cannot complete transactions"></textarea></label>
+    <label>Affected service
+      <select name="serviceId" required>
+        <option th:each="s : ${services}" th:value="${s.id}" th:text="${s.name}"></option></select></label>
+    <label>Category (optional)
+      <select name="categoryId"><option value="">Let the system suggest it</option>
+        <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"></option></select></label>
+    <label>Impact (1 = one user, 5 = whole organization)
+      <select name="impact"><option th:each="n : ${#numbers.sequence(1,5)}" th:value="${n}" th:text="${n}" th:selected="${n == 3}"></option></select></label>
+    <label>Urgency (1 = can wait, 5 = needs fixing now)
+      <select name="urgency"><option th:each="n : ${#numbers.sequence(1,5)}" th:value="${n}" th:text="${n}" th:selected="${n == 3}"></option></select></label>
+    <button type="submit">Submit incident</button>
+  </form>
+</main>
+</body>
+</html>
