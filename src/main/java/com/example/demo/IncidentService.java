@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 
 @Service
 public class IncidentService {
-	private static final String ACTOR = "SYSTEM";   // replaced by the logged-in user once login exists
+
 
 	private final IncidentRepository repo;
 	private final UserRepository users;
@@ -31,11 +31,17 @@ public class IncidentService {
 		this.priorityStrategy = priorityStrategy; this.assignmentService = assignmentService;
 		this.publisher = publisher; this.classifier=classifier; this.slaService=slaService;
 	}
-
+	private String currentActor() {
+		var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+		if (auth == null || !auth.isAuthenticated()
+				|| auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)
+			return "SYSTEM";
+		return auth.getName();
+	}
 	@Transactional
-	public Incident create(CreateIncidentRequest req) {
-		User reporter = users.findById(req.reporterId())
-				.orElseThrow(() -> new ResourceNotFoundException("User", req.reporterId()));
+	public Incident create(CreateIncidentRequest req, String reporterEmail) {
+		User reporter = users.findByEmail(reporterEmail)
+				.orElseThrow(() -> new UnauthorizedOperationException("Unknown user: " + reporterEmail));
 		ItService svc = services.findById(req.serviceId())
 				.orElseThrow(() -> new ResourceNotFoundException("Service", req.serviceId()));
 		Category cat = (req.categoryId() != null)
@@ -101,7 +107,7 @@ public class IncidentService {
 	}
 
 	private void publish(Incident i, EventType type, IncidentStatus before) {
-		publisher.publish(new IncidentEvent(i, type, before, i.getStatus(), ACTOR,
+		publisher.publish(new IncidentEvent(i, type, before, i.getStatus(), currentActor(),
 				describe(i, type), LocalDateTime.now()));
 	}
 

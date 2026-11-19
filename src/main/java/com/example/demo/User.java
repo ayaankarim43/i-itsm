@@ -11,6 +11,9 @@ public abstract class User {
 	private String name;
 	@Column(unique = true)
 	private String email;
+	private String passwordHash;
+	public String passwordHash() { return passwordHash; }
+	public void changePassword(String encodedHash) { this.passwordHash = encodedHash; }
 
 	protected User() {}
 	protected User(String name, String email) { this.name = name; this.email = email; }

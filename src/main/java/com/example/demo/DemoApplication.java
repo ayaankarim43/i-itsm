@@ -3,7 +3,11 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.jspecify.annotations.NonNull;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
 import java.util.Set;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
@@ -13,7 +17,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
 import java.util.List;
 
 import org.springframework.context.annotation.*;
@@ -34,44 +42,101 @@ public class DemoApplication {
 
 
 
+
+
+
 @RestController
 @RequestMapping("/api/incidents")
 class IncidentController {
 	private final IncidentService service;
-	IncidentController(IncidentService service) { this.service = service; }
+	private final AccessGuard guard;
+	private final IncidentSearchService searchService;
+	IncidentController(IncidentService service, AccessGuard guard, IncidentSearchService searchService) { this.service = service; this.guard = guard; this.searchService=searchService; }
+
+	@PostMapping
+	Incident create(@Valid @RequestBody CreateIncidentRequest req, Authentication a) {
+		return service.create(req, a.getName());
+	}
+
+	@GetMapping
+	List<Incident> all(Authentication a) {
+		List<Incident> all = service.findAll();
+		if (guard.isStaff(a)) return all;
+		return all.stream().filter(i -> i.getReporter().getEmail().equals(a.getName())).toList();
+	}
+
+	@GetMapping("/{id}")
+	Incident one(@PathVariable Long id, Authentication a) {
+		Incident i = service.get(id);
+		guard.requireCanView(i, a);
+		return i;
+	}
+	@GetMapping("/search")
+	List<Incident> search(@RequestParam(required = false) Long id,
+						  @RequestParam(required = false) IncidentStatus status,
+						  @RequestParam(required = false) Priority priority,
+						  @RequestParam(required = false) String category,
+						  @RequestParam(required = false) String service,
+						  @RequestParam(required = false) Long technicianId,
+						  @RequestParam(required = false) String slaStatus,
+						  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+						  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+						  @RequestParam(required = false) String text,
+						  Authentication a) {
+		var criteria = new IncidentSearchCriteria(id, status, priority, category, service,
+				technicianId, slaStatus, from, to, text);
+		return searchService.search(criteria,
+				i -> guard.isStaff(a) || i.getReporter().getEmail().equals(a.getName()));
+	}
+
 	@GetMapping("/{id}/recommended-technician")
 	Technician recommend(@PathVariable Long id) { return service.recommend(id); }
-	@PostMapping
-	Incident create(@Valid @RequestBody CreateIncidentRequest req) { return service.create(req); }
-	@GetMapping List<Incident> all() { return service.findAll(); }
-	@GetMapping("/{id}")
-	Incident one(@PathVariable Long id) { return service.get(id); }
 
 	@PostMapping("/{id}/classify")
 	Incident classify(@PathVariable Long id, @RequestParam(required = false) Long categoryId) {
 		return service.classify(id, categoryId);
 	}
-	@PostMapping("/{id}/assign")      Incident assign(@PathVariable Long id)      { return service.assign(id); }
-	@PostMapping("/{id}/acknowledge") Incident acknowledge(@PathVariable Long id) { return service.acknowledge(id); }
-    @PostMapping("/{id}/start")   Incident start(@PathVariable Long id)   { return service.startWork(id); }
-    @PostMapping("/{id}/resolve") Incident resolve(@PathVariable Long id) { return service.resolve(id); }
-    @PostMapping("/{id}/verify")  Incident verify(@PathVariable Long id)  { return service.verify(id); }
-    @PostMapping("/{id}/close")   Incident close(@PathVariable Long id)   { return service.close(id); }
-}
-@Configuration
-class DevSecurityConfig {
-	@Bean
-	SecurityFilterChain chain(HttpSecurity http) throws Exception {
-		http.authorizeHttpRequests(a -> a.anyRequest().permitAll())
-				.csrf(c -> c.disable());
-		return http.build();
+
+	@PostMapping("/{id}/assign")
+	Incident assign(@PathVariable Long id) { return service.assign(id); }
+
+	@PostMapping("/{id}/acknowledge")
+	Incident acknowledge(@PathVariable Long id, Authentication a) {
+		guard.requireAssignedTechnician(service.get(id), a);
+		return service.acknowledge(id);
 	}
+
+	@PostMapping("/{id}/start")
+	Incident start(@PathVariable Long id, Authentication a) {
+		guard.requireAssignedTechnician(service.get(id), a);
+		return service.startWork(id);
+	}
+
+	@PostMapping("/{id}/resolve")
+	Incident resolve(@PathVariable Long id, Authentication a) {
+		guard.requireAssignedTechnician(service.get(id), a);
+		return service.resolve(id);
+	}
+
+	@PostMapping("/{id}/verify")
+	Incident verify(@PathVariable Long id, Authentication a) {
+		guard.requireReporter(service.get(id), a);
+		return service.verify(id);
+	}
+
+	@PostMapping("/{id}/close")
+	Incident close(@PathVariable Long id) { return service.close(id); }
 }
+
 @RestControllerAdvice
 class GlobalExceptionHandler {
 	@ExceptionHandler(InvalidStateTransitionException.class)
 	ResponseEntity<String> invalid(InvalidStateTransitionException e) {
 		return ResponseEntity.status(409).body(e.getMessage());
+	}
+	@ExceptionHandler(UnauthorizedOperationException.class)
+	ResponseEntity<String> forbidden(UnauthorizedOperationException e) {
+		return ResponseEntity.status(403).body(e.getMessage());
 	}
 	@ExceptionHandler(MissingSlaConfigurationException.class)
 	ResponseEntity<String> noSla(MissingSlaConfigurationException e) {
@@ -102,18 +167,23 @@ class DataSeeder implements CommandLineRunner {
 	private final ItServiceRepository services;
 	private final CategoryRepository categories;
 	private final SlaPolicyRepository policies;
-
-	DataSeeder(UserRepository users, ItServiceRepository services, CategoryRepository categories, SlaPolicyRepository policies) {
-		this.users = users; this.services = services; this.categories = categories; this.policies=policies;
+    private final PasswordEncoder encoder;
+	DataSeeder(UserRepository users, ItServiceRepository services, CategoryRepository categories, SlaPolicyRepository policies, PasswordEncoder encoder) {
+		this.users = users; this.services = services; this.categories = categories; this.policies=policies; this.encoder=encoder;
+	}
+	private void saveUser(User u) {
+		u.changePassword(encoder.encode("password123"));
+		users.save(u);
 	}
 
 	@Override
 	public void run(String @NonNull ... args) {
 		if (users.count() > 0) return;
-		users.save(new Employee("Asha", "asha@corp.test", "Finance"));
-		users.save(new Technician("Ravi", "ravi@corp.test", Set.of("Network", "Database"), 5, 5));
-		users.save(new Technician("Meera", "meera@corp.test", Set.of("Application", "Cloud"), 3, 4));
-		users.save(new Administrator("Admin", "admin@corp.test"));
+		saveUser(new Employee("Asha", "asha@corp.test", "Finance"));
+		saveUser(new Technician("Ravi", "ravi@corp.test", Set.of("Network", "Database"), 5, 5));
+		saveUser(new Technician("Meera", "meera@corp.test", Set.of("Application", "Cloud"), 3, 4));
+		saveUser(new Administrator("Admin", "admin@corp.test"));
+		saveUser(new Employee("Dev", "dev@corp.test", "Sales"));
 		ItService payment = services.save(new ItService("Payment", 5));
 		policies.save(new SlaPolicy(Priority.P1, null, 5, 30));
 		policies.save(new SlaPolicy(Priority.P2, null, 15, 120));
